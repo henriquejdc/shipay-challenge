@@ -16,15 +16,21 @@ def main(argv):
     handler = RotatingFileHandler('bot.log', maxBytes=10000, backupCount=1)
     handler.setLevel(logging.INFO)
     app.logger.addHandler(handler)
+    # REVIEW: Credenciais fixas no código-fonte são um problema de segurança.
+    # Sugestão: Ler a URI do banco por variável de ambiente/secret manager e trocar está senha exposta.
     app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:123mudar@127.0.0.1:5432/bot_db'
     db = SQLAlchemy(app)
     config = configparser.ConfigParser()
+    # REVIEW: Caminhos absolutos podem ser um problema; ConfigParser.read falha de forma silenciosa.
+    # Sugestão: Monte o caminho relativo ao projeto e valide a existência do arquivo/diretório.
     config.read('/tmp/bot/settings/config.ini')
 
     var1 = int(config.get('scheduler','IntervalInMinutes'))
     app.logger.warning('Intervalo entre as execucoes do processo: {}'.format(var1))
     scheduler = BlockingScheduler()
 
+    # REVIEW: A task1(db) está sendo executada imediatamente, em vez de agendada como callable.
+    # Sugestão: Passar para uma função (callable) e args/kwargs.
     task1_instance = scheduler.add_job(task1(db), 'interval', id='task1_job', minutes=var1)
 
     try:
@@ -45,6 +51,9 @@ def task1(db):
     workbook = xlsxwriter.Workbook(file_path)
     worksheet = workbook.add_worksheet()
 
+    # REVIEW: SELECT * trás todas as informações e caso mudem o esquema da tabela podendo trazer falhas nas
+    # informações previstas, também exportar dados sensíveis é perigoso.
+    # Sugestão: Selecionar apenas colunas necessárias e sem conter o password se não for necessário.
     orders = db.session.execute('SELECT * FROM users;')
     
     index = 1
@@ -66,6 +75,8 @@ def task1(db):
         worksheet.write('B{0}'.format(index),order[1])
         print('Email: {0}'.format(order[2]))
         worksheet.write('C{0}'.format(index),order[2])
+        # REVIEW: Informações sensíveis não devem ser utilizadas em logs.
+        # Sugestão: Remova este print.
         print('Password: {0}'.format(order[3]))
         worksheet.write('D{0}'.format(index),order[3])
         print('Role Id: {0}'.format(order[4]))
@@ -75,6 +86,8 @@ def task1(db):
         print('Updated At: {0}'.format(order[6]))
         worksheet.write('G{0}'.format(index),order[6])
         
+    # REVIEW: A execução do workbook deve ser protegido com try/finally e limpeza da sessão.
+    # Sugestão: Implemente um try/finally, além da limpeza de sessão.
     workbook.close()
     print('job executed!')
 
