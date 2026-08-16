@@ -13,6 +13,7 @@ def create_app() -> FastAPI:
 
     from endpoints.health import controllers as health_module
     health_module.configure(app)
+    # REVIEW: Falta o registro do endpoint registration com seu configure.
 
     container.wire(modules=[health_module])
 

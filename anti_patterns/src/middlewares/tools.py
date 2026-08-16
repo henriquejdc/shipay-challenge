@@ -29,10 +29,12 @@ class Tools(SqlRepository):
 
     async def get_secrets_by_id(self, id: int) -> str:
         async with self.session_factory() as session:
+            # REVIEW: SQL em f-string é vulnerável a injeção; use consultas parametrizadas do SQLAlchemy.
             return await session.execute(f'SELECT access_key FROM secrets WHERE id = {id} LIMIT 1')
     
     async def get_role_by_entity_type(self, entity_type: str) -> int:
         async with self.session_factory() as session:
+            # REVIEW: Entrada do usuário não deve ser interpolada diretamente no SQL;  use consultas parametrizadas do SQLAlchemy..
             if entity_type.lower() == 'admins':
                 return await session.execute(f'SELECT role_id FROM admins WHERE entity_type = {entity_type}')
             elif entity_type.lower() == 'customers':
@@ -42,8 +44,11 @@ class Tools(SqlRepository):
     
     async def get_claims_by_user_id(self, user_id: int) -> dict:
         async with self.session_factory() as session:
+            # REVIEW: Falta await; isso retorna coroutine e quebra o encadeamento da query.
             entity_type = session.execute(f'SELECT entity_type FROM users WHERE id = {user_id}')
+            # REVIEW: Falta await; isso retorna coroutine e quebra o encadeamento da query.
             role_id = self.get_role_by_entity_type(entity_type=entity_type)
+            # REVIEW: Query acima ainda não é um valor resolvido; a query final recebe coroutine/resultado inválido.
             return await session.execute(f'SELECT meta_data AS claims FROM claims WHERE role_id = {role_id}')
     
     async def cnpf_has_its_format_validated(self, cnpj: str) -> bool:

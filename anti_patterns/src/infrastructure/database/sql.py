@@ -18,6 +18,7 @@ class PostgresDatabase(IDatabase):
             orm.sessionmaker(self._engine, expire_on_commit=False, class_=AsyncSession), scopefunc=current_task)
 
     def create_database(self) -> None:
+        # REVIEW: Create_all em AsyncEngine precisa de run_sync/connection assíncrona; assim tende a falhar.
         Base.metadata.create_all(self._engine)
 
     @asynccontextmanager

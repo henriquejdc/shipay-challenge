@@ -20,6 +20,8 @@ class SqlRepository(IRepository):
     async def filter_all_by(self, params):
         async with self.session_factory() as session:
             result = await session.execute(select(self.model).filter_by(**params))
+            # REVIEW: Materialize o resultado antes de retornar para evitar expor o ScalarResult
+            # da camada de persistência e manter o ciclo de vida do resultado restrito à sessão.
             return result.scalars()
 
     async def create(self, values):
@@ -41,8 +43,12 @@ class SqlRepository(IRepository):
 
     async def commit(self):
         async with self.session_factory() as session:
+            # REVIEW: Esta é uma nova sessão; o commit não confirma alterações realizadas
+            # em uma sessão/transação diferente. O commit deve ocorrer na sessão que realizou a operação.
             await session.commit()
 
     async def rollback(self):
         async with self.session_factory() as session:
+            # REVIEW: Esta é uma nova sessão; o rollback não desfaz alterações realizadas
+            # em uma sessão/transação diferente. O rollback deve ocorrer na sessão que realizou a operação.
             await session.rollback()
